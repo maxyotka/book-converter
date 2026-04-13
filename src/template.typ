@@ -28,6 +28,10 @@
     first-line-indent: 1.5em,
     linebreaks: "optimized",
   )
+  show: it => {
+    set block(spacing: 0.65em)
+    it
+  }
 
   // --- COVER ---
   if cover != none {
