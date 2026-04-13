@@ -100,7 +100,32 @@
   // --- MAIN BODY ---
   set page(
     paper: "a5",
-    margin: (inside: 22mm, outside: 18mm, top: 18mm, bottom: 20mm),
+    margin: (inside: 22mm, outside: 18mm, top: 22mm, bottom: 20mm),
+    header: context {
+      let headings = query(heading.where(level: 1))
+      let page-num = here().page()
+      let current = headings.filter(h => h.location().page() <= page-num)
+      if current.len() == 0 { return }
+      set text(size: 9pt, tracking: 0.1em)
+      if calc.even(page-num) [
+        #align(left)[#upper(author)]
+      ] else [
+        #set text(style: "italic")
+        #align(right)[#current.last().body]
+      ]
+    },
+    footer: context {
+      let headings = query(heading.where(level: 1))
+      let page-num = here().page()
+      let current = headings.filter(h => h.location().page() <= page-num)
+      if current.len() == 0 { return }
+      set text(size: 9pt)
+      if calc.even(page-num) [
+        #align(left)[#page-num]
+      ] else [
+        #align(right)[#page-num]
+      ]
+    },
   )
   body
 }
