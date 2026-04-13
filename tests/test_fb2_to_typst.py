@@ -6,6 +6,7 @@ from src.fb2_to_typst import (
     load_fb2,
     parse_chapters,
     parse_metadata,
+    render_typst,
 )
 
 FB2_ZIP = Path(__file__).parent.parent / "Sotnikov_Venya-Puhov_3_Rusalka-Poisk.PM79RA.456797.fb2.zip"
@@ -84,3 +85,13 @@ def test_typography_idempotent():
     once = apply_russian_typography("Он сказал в лес.")
     twice = apply_russian_typography(once)
     assert once == twice
+
+
+def test_render_typst_produces_valid_content():
+    root = load_fb2(FB2_ZIP)
+    output = render_typst(root, cover_path="cover.jpg")
+    assert '#import "../src/template.typ"' in output
+    assert "Русалка. Поиск" in output
+    assert "Сотников" in output
+    assert "cover.jpg" in output
+    assert output.count("#chapter(") == 21

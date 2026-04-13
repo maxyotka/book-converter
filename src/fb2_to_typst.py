@@ -155,3 +155,84 @@ def extract_cover(root: ET.Element, out_path: Path) -> None:
             out_path.write_bytes(base64.b64decode(binary.text or ""))
             return
     raise ValueError("cover.jpg not found in FB2 binaries")
+
+
+def _typst_escape(text: str) -> str:
+    """Escape text for Typst content mode (inside [ ])."""
+    return (
+        text.replace("\\", "\\\\")
+        .replace("[", "\\[")
+        .replace("]", "\\]")
+        .replace("#", "\\#")
+        .replace("@", "\\@")
+        .replace("$", "\\$")
+        .replace("*", "\\*")
+        .replace("_", "\\_")
+        .replace("`", "\\`")
+        .replace("<", "\\<")
+        .replace(">", "\\>")
+    )
+
+
+def _typst_string(text: str) -> str:
+    """Escape for Typst string literal."""
+    return '"' + text.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+def render_typst(root: ET.Element, cover_path: str) -> str:
+    """Render the full book as a Typst source file."""
+    meta = parse_metadata(root)
+    chapters = parse_chapters(root)
+
+    lines = []
+    lines.append('#import "../src/template.typ": *')
+    lines.append("")
+    lines.append("#show: book.with(")
+    lines.append(f"  title: {_typst_string(meta['title'])},")
+    lines.append(f"  author: {_typst_string(meta['author'])},")
+    if meta["series_name"]:
+        lines.append(f"  series-name: {_typst_string(meta['series_name'])},")
+        lines.append(f"  series-number: {meta['series_number']},")
+    lines.append(f"  cover: {_typst_string(cover_path)},")
+    lines.append(f"  publisher: {_typst_string(meta['publisher'])},")
+    lines.append(f"  year: {_typst_string(meta['year'])},")
+    lines.append(f"  isbn: {_typst_string(meta['isbn'])},")
+    ann = apply_russian_typography(meta["annotation"])
+    lines.append(f"  annotation: [{_typst_escape(ann)}],")
+    lines.append(")")
+    lines.append("")
+
+    for ch in chapters:
+        num = _typst_string(ch["number_label"])
+        title = _typst_string(ch["title"])
+        lines.append(f"#chapter(number: {num}, title: {title})[")
+        for p in ch["paragraphs"]:
+            p_typo = apply_russian_typography(p)
+            lines.append(f"  #para[{_typst_escape(p_typo)}]")
+            lines.append("")
+        lines.append("]")
+        lines.append("")
+
+    return "\n".join(lines)
+
+
+def main() -> int:
+    import argparse
+    parser = argparse.ArgumentParser(description="Convert FB2.zip to Typst source + cover image")
+    parser.add_argument("fb2_zip", type=Path, help="Path to .fb2.zip input")
+    parser.add_argument("out_dir", type=Path, help="Output directory (e.g. build/)")
+    args = parser.parse_args()
+
+    root = load_fb2(args.fb2_zip)
+    args.out_dir.mkdir(parents=True, exist_ok=True)
+
+    extract_cover(root, args.out_dir / "cover.jpg")
+    typst_src = render_typst(root, cover_path="cover.jpg")
+    (args.out_dir / "book.typ").write_text(typst_src, encoding="utf-8")
+
+    print(f"Wrote {args.out_dir / 'book.typ'} and {args.out_dir / 'cover.jpg'}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
