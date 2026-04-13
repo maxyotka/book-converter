@@ -208,9 +208,16 @@ def render_typst(root: ET.Element, cover_path: str) -> str:
         num = _typst_string(ch["number_label"])
         title = _typst_string(ch["title"])
         lines.append(f"#chapter(number: {num}, title: {title})[")
-        for p in ch["paragraphs"]:
+        for i, p in enumerate(ch["paragraphs"]):
             p_typo = apply_russian_typography(p)
-            lines.append(f"  #para[{_typst_escape(p_typo)}]")
+            if i == 0 and p_typo:
+                first_letter = p_typo[0]
+                rest = p_typo[1:]
+                lines.append(
+                    f"  #para[#dropcap({_typst_string(first_letter)})[{_typst_escape(rest)}]]"
+                )
+            else:
+                lines.append(f"  #para[{_typst_escape(p_typo)}]")
             lines.append("")
         lines.append("]")
         lines.append("")

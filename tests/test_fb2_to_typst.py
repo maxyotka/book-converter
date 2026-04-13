@@ -95,3 +95,9 @@ def test_render_typst_produces_valid_content():
     assert "Сотников" in output
     assert "cover.jpg" in output
     assert output.count("#chapter(") == 21
+
+
+def test_first_paragraph_uses_dropcap():
+    root = load_fb2(FB2_ZIP)
+    output = render_typst(root, cover_path="cover.jpg")
+    assert "#dropcap(" in output

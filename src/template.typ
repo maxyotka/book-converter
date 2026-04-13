@@ -165,4 +165,18 @@
   v(1em)
 }
 
-#let dropcap(body) = body  // placeholder, real impl in Task 10
+#let dropcap(letter, rest) = {
+  set par(first-line-indent: 0em)
+  let cap-size = 3.2em
+  box(
+    height: 2.4em,
+    width: 1.9em,
+    place(
+      top + left,
+      dy: -0.15em,
+      text(size: cap-size, weight: "bold", font: ("PT Serif", "Times New Roman"))[#letter],
+    ),
+  )
+  h(-2.1em)
+  rest
+}
