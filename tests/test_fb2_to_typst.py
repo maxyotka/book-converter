@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from src.fb2_to_typst import load_fb2, parse_chapters, parse_metadata
+from src.fb2_to_typst import extract_cover, load_fb2, parse_chapters, parse_metadata
 
 FB2_ZIP = Path(__file__).parent.parent / "Sotnikov_Venya-Puhov_3_Rusalka-Poisk.PM79RA.456797.fb2.zip"
 
@@ -43,3 +43,12 @@ def test_last_chapter_is_epilogue():
     ch = parse_chapters(root)[-1]
     assert ch["number_label"] == ""
     assert ch["title"] == "ЭПИЛОГ"
+
+
+def test_extract_cover_writes_jpeg(tmp_path):
+    root = load_fb2(FB2_ZIP)
+    out = tmp_path / "cover.jpg"
+    extract_cover(root, out)
+    assert out.exists()
+    assert out.stat().st_size > 1000
+    assert out.read_bytes()[:3] == b"\xff\xd8\xff"

@@ -1,4 +1,5 @@
 """FB2 -> Typst converter for one specific book."""
+import base64
 import zipfile
 from pathlib import Path
 from xml.etree import ElementTree as ET
@@ -89,3 +90,13 @@ def parse_chapters(root: ET.Element) -> list[dict]:
             }
         )
     return chapters
+
+
+def extract_cover(root: ET.Element, out_path: Path) -> None:
+    """Decode <binary id="cover.jpg"> and write JPEG to out_path."""
+    for binary in root.findall("f:binary", NS):
+        if binary.get("id") == "cover.jpg":
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            out_path.write_bytes(base64.b64decode(binary.text or ""))
+            return
+    raise ValueError("cover.jpg not found in FB2 binaries")
