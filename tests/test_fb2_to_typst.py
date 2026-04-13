@@ -1,6 +1,12 @@
 from pathlib import Path
 
-from src.fb2_to_typst import extract_cover, load_fb2, parse_chapters, parse_metadata
+from src.fb2_to_typst import (
+    apply_russian_typography,
+    extract_cover,
+    load_fb2,
+    parse_chapters,
+    parse_metadata,
+)
 
 FB2_ZIP = Path(__file__).parent.parent / "Sotnikov_Venya-Puhov_3_Rusalka-Poisk.PM79RA.456797.fb2.zip"
 
@@ -52,3 +58,29 @@ def test_extract_cover_writes_jpeg(tmp_path):
     assert out.exists()
     assert out.stat().st_size > 1000
     assert out.read_bytes()[:3] == b"\xff\xd8\xff"
+
+
+def test_typography_straight_quotes_become_guillemets():
+    assert apply_russian_typography('Он сказал "привет" ей.') == 'Он сказал «привет» ей.'
+
+
+def test_typography_double_hyphen_becomes_em_dash():
+    result = apply_russian_typography("слово -- слово")
+    assert "—" in result
+
+
+def test_typography_dash_at_line_start_gets_nbsp():
+    result = apply_russian_typography("— Как тебя зовут?")
+    assert result.startswith("—\u00a0Как")
+
+
+def test_typography_short_word_nbsp():
+    result = apply_russian_typography("Он пошёл в лес и на реку.")
+    assert "в\u00a0лес" in result
+    assert "на\u00a0реку" in result
+
+
+def test_typography_idempotent():
+    once = apply_russian_typography("Он сказал в лес.")
+    twice = apply_russian_typography(once)
+    assert once == twice
