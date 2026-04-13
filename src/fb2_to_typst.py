@@ -193,7 +193,9 @@ def render_typst(root: ET.Element, cover_path: str) -> str:
     if meta["series_name"]:
         lines.append(f"  series-name: {_typst_string(meta['series_name'])},")
         lines.append(f"  series-number: {meta['series_number']},")
-    lines.append(f"  cover: {_typst_string(cover_path)},")
+    lines.append(
+        f"  cover: image({_typst_string(cover_path)}, width: 100%, height: 100%, fit: \"cover\"),"
+    )
     lines.append(f"  publisher: {_typst_string(meta['publisher'])},")
     lines.append(f"  year: {_typst_string(meta['year'])},")
     lines.append(f"  isbn: {_typst_string(meta['isbn'])},")
