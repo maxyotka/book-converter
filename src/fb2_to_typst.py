@@ -50,3 +50,42 @@ def parse_metadata(root: ET.Element) -> dict:
         "year": _text(pi.find("f:year", NS)) if pi is not None else "",
         "isbn": _text(pi.find("f:isbn", NS)) if pi is not None else "",
     }
+
+
+def parse_chapters(root: ET.Element) -> list[dict]:
+    """Extract chapters from the book body.
+
+    Each top-level <section> is one chapter. Title is in <title>/<p> —
+    either ["Глава N", "Название"] for regular chapters, or ["Эпилог"] for the epilogue.
+    """
+    body = root.find("f:body", NS)
+    chapters = []
+    for section in body.findall("f:section", NS):
+        title_el = section.find("f:title", NS)
+        title_parts = (
+            [(p.text or "").strip() for p in title_el.findall("f:p", NS)]
+            if title_el is not None
+            else []
+        )
+
+        if len(title_parts) >= 2 and title_parts[0].lower().startswith("глава"):
+            number_label = title_parts[0]
+            title = title_parts[1]
+        else:
+            number_label = ""
+            title = " ".join(title_parts)
+
+        paragraphs = [
+            (p.text or "").strip()
+            for p in section.findall("f:p", NS)
+            if (p.text or "").strip()
+        ]
+
+        chapters.append(
+            {
+                "number_label": number_label,
+                "title": title,
+                "paragraphs": paragraphs,
+            }
+        )
+    return chapters
