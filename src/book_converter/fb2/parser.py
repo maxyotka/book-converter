@@ -7,6 +7,7 @@ from book_converter.ir import (
     Block,
     BookMeta,
     Cite,
+    Document,
     Epigraph,
     Image,
     Inline,
@@ -225,3 +226,14 @@ def parse_section(section: ET.Element, level: int) -> Section:
         elif local == "section":
             blocks.append(parse_section(child, level=level + 1))
     return Section(level=level, title=title_lines, blocks=blocks)
+
+
+def parse_document(root: ET.Element) -> Document:
+    meta = parse_metadata(root)
+    sections: list[Section] = []
+    for body in root.findall("f:body", NS):
+        if body.get("name"):
+            continue  # handled in task 9 (notes)
+        for sec in body.findall("f:section", NS):
+            sections.append(parse_section(sec, level=1))
+    return Document(meta=meta, sections=sections, footnotes={}, binaries={})
