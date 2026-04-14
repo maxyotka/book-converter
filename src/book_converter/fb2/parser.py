@@ -1,9 +1,11 @@
 """FB2 ElementTree → Document IR."""
 from __future__ import annotations
 
+import base64
 from xml.etree import ElementTree as ET
 
 from book_converter.ir import (
+    Binary,
     Block,
     BookMeta,
     Cite,
@@ -233,6 +235,8 @@ def parse_document(root: ET.Element) -> Document:
     meta = parse_metadata(root)
     sections: list[Section] = []
     footnotes: dict[str, Footnote] = {}
+    binaries: dict[str, Binary] = {}
+
     for body in root.findall("f:body", NS):
         name = body.get("name")
         if name == "notes":
@@ -248,4 +252,13 @@ def parse_document(root: ET.Element) -> Document:
             continue  # other named bodies ignored
         for sec in body.findall("f:section", NS):
             sections.append(parse_section(sec, level=1))
-    return Document(meta=meta, sections=sections, footnotes=footnotes, binaries={})
+
+    for bin_el in root.findall("f:binary", NS):
+        bid = bin_el.get("id")
+        ctype = bin_el.get("content-type", "application/octet-stream")
+        if not bid:
+            continue
+        data = base64.b64decode(bin_el.text or "")
+        binaries[bid] = Binary(id=bid, content_type=ctype, data=data)
+
+    return Document(meta=meta, sections=sections, footnotes=footnotes, binaries=binaries)
