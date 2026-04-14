@@ -1,6 +1,7 @@
 """Render Document IR → Typst source."""
 from __future__ import annotations
 
+import re as _re
 import sys
 from typing import Callable
 
@@ -20,6 +21,7 @@ from book_converter.ir import (
     Paragraph,
     Poem,
     SceneBreak,
+    Section,
     Subtitle,
 )
 from book_converter.render.escape import typst_escape, typst_string
@@ -96,3 +98,88 @@ def render_block(
         stanzas_tuple = "(" + ", ".join(stanzas_src) + ",)"
         return f"#poem(title: {title}, author: {author}, stanzas: {stanzas_tuple})"
     raise TypeError(f"render_block does not handle {type(block).__name__}")
+
+
+_CHAPTER_LABEL_RE = _re.compile(r"^\s*(Глава|Chapter|Part)\s+\S+", _re.IGNORECASE)
+
+
+def _plain_text_length(inlines: list) -> int:
+    total = 0
+    for n in inlines:
+        if isinstance(n, InlineText):
+            total += len(n.text)
+        elif hasattr(n, "children"):
+            total += _plain_text_length(n.children)
+    return total
+
+
+def _first_paragraph_plain(inlines: list) -> str:
+    parts = []
+    for n in inlines:
+        if isinstance(n, InlineText):
+            parts.append(n.text)
+        elif hasattr(n, "children"):
+            parts.append(_first_paragraph_plain(n.children))
+    return "".join(parts)
+
+
+def _render_title_lines(title: list, fn_resolver: FootnoteResolver) -> str:
+    rendered = [render_inlines(line, fn_resolver) for line in title]
+    return " \\ ".join(rendered)
+
+
+def render_section(
+    section,
+    footnote_resolver: FootnoteResolver,
+    image_path: Callable[[str], str] | None = None,
+) -> str:
+    image_path = image_path or (lambda bid: bid)
+
+    if section.level == 1:
+        title_src = _render_title_lines(section.title, footnote_resolver)
+        body = _render_section_body(section, footnote_resolver, image_path, dropcap=False)
+        return f"#part(title: [{title_src}])[\n{body}\n]"
+
+    if section.level == 2:
+        if section.title and _CHAPTER_LABEL_RE.match(_first_paragraph_plain(section.title[0])):
+            number_line = render_inlines(section.title[0], footnote_resolver)
+            rest_lines = [render_inlines(line, footnote_resolver) for line in section.title[1:]]
+            title_src = " \\ ".join(rest_lines) if rest_lines else ""
+            number_arg = f"number: {typst_string(number_line)}, "
+        else:
+            number_arg = ""
+            title_src = _render_title_lines(section.title, footnote_resolver)
+        body = _render_section_body(section, footnote_resolver, image_path, dropcap=True)
+        return f"#chapter({number_arg}title: [{title_src}])[\n{body}\n]"
+
+    title_src = _render_title_lines(section.title, footnote_resolver)
+    body = _render_section_body(section, footnote_resolver, image_path, dropcap=False)
+    return f"#subsection(level: {section.level}, title: [{title_src}])[\n{body}\n]"
+
+
+def _render_section_body(
+    section,
+    fn_resolver: FootnoteResolver,
+    image_path: Callable[[str], str],
+    dropcap: bool,
+) -> str:
+    dropcap_done = not dropcap
+    parts: list[str] = []
+    for block in section.blocks:
+        if isinstance(block, Section):
+            parts.append(render_section(block, fn_resolver, image_path))
+            continue
+        if (
+            not dropcap_done
+            and isinstance(block, Paragraph)
+            and _plain_text_length(block.inlines) >= 120
+        ):
+            plain = _first_paragraph_plain(block.inlines)
+            first = plain[0]
+            rest_inlines = [InlineText(text=plain[1:])]
+            rest_src = render_inlines(rest_inlines, fn_resolver)
+            parts.append(f"#para[#dropcap({typst_string(first)})[{rest_src}]]")
+            dropcap_done = True
+            continue
+        parts.append(render_block(block, fn_resolver, image_path))
+    return "\n".join(parts)
