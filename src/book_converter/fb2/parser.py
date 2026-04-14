@@ -6,6 +6,8 @@ from xml.etree import ElementTree as ET
 from book_converter.ir import (
     Block,
     BookMeta,
+    Cite,
+    Epigraph,
     Image,
     Inline,
     InlineEmphasis,
@@ -16,7 +18,10 @@ from book_converter.ir import (
     InlineSup,
     InlineText,
     Paragraph,
+    Poem,
+    PoemStanza,
     SceneBreak,
+    Section,
     Subtitle,
 )
 
@@ -143,28 +148,80 @@ def _parse_inlines(elem: ET.Element) -> list[Inline]:
     return out
 
 
-def parse_section_blocks(section: ET.Element) -> list[Block]:
+def _parse_title_lines(title_el: ET.Element | None) -> list[list[Inline]]:
+    if title_el is None:
+        return []
+    lines: list[list[Inline]] = []
+    for p in title_el.findall("f:p", NS):
+        lines.append(_parse_inlines(p))
+    return lines
+
+
+def _parse_text_author(parent: ET.Element) -> list[Inline] | None:
+    ta = parent.find("f:text-author", NS)
+    if ta is None:
+        return None
+    return _parse_inlines(ta)
+
+
+def _parse_nested_blocks(parent: ET.Element) -> list[Block]:
+    """Parse child <p>/<empty-line>/<subtitle> of a container like <epigraph>/<cite>."""
+    blocks: list[Block] = []
+    for child in parent:
+        local = _local(child.tag)
+        if local == "p":
+            blocks.append(Paragraph(inlines=_parse_inlines(child)))
+        elif local == "empty-line":
+            blocks.append(SceneBreak())
+        elif local == "subtitle":
+            blocks.append(Subtitle(inlines=_parse_inlines(child)))
+    return blocks
+
+
+def _parse_poem(elem: ET.Element) -> Poem:
+    title_el = elem.find("f:title", NS)
+    title_inlines: list[Inline] | None = None
+    if title_el is not None:
+        p = title_el.find("f:p", NS)
+        title_inlines = _parse_inlines(p) if p is not None else _parse_inlines(title_el)
+    stanzas: list[PoemStanza] = []
+    for st in elem.findall("f:stanza", NS):
+        lines = [_parse_inlines(v) for v in st.findall("f:v", NS)]
+        stanzas.append(PoemStanza(lines=lines))
+    return Poem(title=title_inlines, stanzas=stanzas, author=_parse_text_author(elem))
+
+
+def parse_section(section: ET.Element, level: int) -> Section:
+    title_lines = _parse_title_lines(section.find("f:title", NS))
     blocks: list[Block] = []
     for child in section:
         local = _local(child.tag)
         if local == "title":
-            continue  # handled by caller
-        if local == "epigraph":
-            continue  # handled in task 7
-        if local == "section":
-            continue  # handled in task 8
+            continue
         if local == "p":
             blocks.append(Paragraph(inlines=_parse_inlines(child)))
         elif local == "empty-line":
             blocks.append(SceneBreak())
         elif local == "subtitle":
             p = child.find("f:p", NS)
-            source = p if p is not None else child
-            blocks.append(Subtitle(inlines=_parse_inlines(source)))
+            src = p if p is not None else child
+            blocks.append(Subtitle(inlines=_parse_inlines(src)))
         elif local == "image":
             href = child.get(L_HREF, "")
             if href.startswith("#"):
                 blocks.append(Image(binary_id=href[1:]))
-        elif local in ("cite", "poem"):
-            continue  # handled in task 7
-    return blocks
+        elif local == "epigraph":
+            blocks.append(Epigraph(
+                blocks=_parse_nested_blocks(child),
+                author=_parse_text_author(child),
+            ))
+        elif local == "cite":
+            blocks.append(Cite(
+                blocks=_parse_nested_blocks(child),
+                author=_parse_text_author(child),
+            ))
+        elif local == "poem":
+            blocks.append(_parse_poem(child))
+        elif local == "section":
+            blocks.append(parse_section(child, level=level + 1))
+    return Section(level=level, title=title_lines, blocks=blocks)
