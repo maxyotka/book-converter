@@ -9,6 +9,7 @@ from book_converter.ir import (
     Block,
     Cite,
     Epigraph,
+    Footnote,
     Image,
     Inline,
     InlineEmphasis,
@@ -183,3 +184,38 @@ def _render_section_body(
             continue
         parts.append(render_block(block, fn_resolver, image_path))
     return "\n".join(parts)
+
+
+def _strip_fnref(inlines: list, warned: list) -> list:
+    out: list = []
+    for n in inlines:
+        if isinstance(n, InlineFootnoteRef):
+            warned[0] = True
+            continue
+        if isinstance(n, InlineText):
+            out.append(n)
+        elif isinstance(n, InlineLink):
+            out.append(InlineLink(url=n.url, children=_strip_fnref(n.children, warned)))
+        elif hasattr(n, "children"):
+            out.append(type(n)(children=_strip_fnref(n.children, warned)))
+        else:
+            out.append(n)
+    return out
+
+
+def make_footnote_resolver(footnotes: dict[str, Footnote]) -> FootnoteResolver:
+    def _resolve(note_id: str):
+        fn = footnotes.get(note_id)
+        if fn is None:
+            return None
+        warned = [False]
+        parts: list[str] = []
+        for block in fn.blocks:
+            if isinstance(block, Paragraph):
+                stripped = _strip_fnref(block.inlines, warned)
+                parts.append(render_inlines(stripped, lambda _n: None))
+        if warned[0]:
+            print(f"warning: nested footnote in '{note_id}' flattened", file=sys.stderr)
+        return " ".join(parts)
+
+    return _resolve
