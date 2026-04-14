@@ -86,7 +86,7 @@ def render_block(
     if isinstance(block, SceneBreak):
         return "#scene-break"
     if isinstance(block, Image):
-        return f"#book-image({typst_string(image_path(block.binary_id))})"
+        return f"#book-image[#image({typst_string(image_path(block.binary_id))}, width: 80%)]"
     if isinstance(block, Epigraph):
         author = _maybe_author(block.author)
         body = "\n".join(render_block(b, footnote_resolver, image_path) for b in block.blocks)
@@ -108,6 +108,15 @@ def render_block(
 
 
 _CHAPTER_LABEL_RE = _re.compile(r"^\s*(Глава|Chapter|Part)\s+\S+", _re.IGNORECASE)
+
+
+def _has_nested_sections(sections: list) -> bool:
+    """True if any top-level section contains a nested Section block."""
+    for s in sections:
+        for b in s.blocks:
+            if isinstance(b, Section):
+                return True
+    return False
 
 
 def _plain_text_length(inlines: list) -> int:
@@ -139,15 +148,22 @@ def render_section(
     section,
     footnote_resolver: FootnoteResolver,
     image_path: Callable[[str], str] | None = None,
+    level_offset: int = 0,
 ) -> str:
     image_path = image_path or (lambda bid: bid)
+    effective_level = section.level + level_offset
 
-    if section.level == 1:
+    if effective_level == 1:
         title_src = _render_title_lines(section.title, footnote_resolver)
-        body = _render_section_body(section, footnote_resolver, image_path, dropcap=False)
-        return f"#part(title: [{title_src}])[\n{body}\n]"
+        parts: list[str] = [f"#part(title: [{title_src}])"]
+        for block in section.blocks:
+            if isinstance(block, Section):
+                parts.append(render_section(block, footnote_resolver, image_path, level_offset))
+            else:
+                parts.append(render_block(block, footnote_resolver, image_path))
+        return "\n".join(parts)
 
-    if section.level == 2:
+    if effective_level == 2:
         if section.title and _CHAPTER_LABEL_RE.match(_first_paragraph_plain(section.title[0])):
             number_line = render_inlines(section.title[0], footnote_resolver)
             rest_lines = [render_inlines(line, footnote_resolver) for line in section.title[1:]]
@@ -156,12 +172,12 @@ def render_section(
         else:
             number_arg = ""
             title_src = _render_title_lines(section.title, footnote_resolver)
-        body = _render_section_body(section, footnote_resolver, image_path, dropcap=True)
+        body = _render_section_body(section, footnote_resolver, image_path, dropcap=True, level_offset=level_offset)
         return f"#chapter({number_arg}title: [{title_src}])[\n{body}\n]"
 
     title_src = _render_title_lines(section.title, footnote_resolver)
-    body = _render_section_body(section, footnote_resolver, image_path, dropcap=False)
-    return f"#subsection(level: {section.level}, title: [{title_src}])[\n{body}\n]"
+    body = _render_section_body(section, footnote_resolver, image_path, dropcap=False, level_offset=level_offset)
+    return f"#subsection(level: {effective_level}, title: [{title_src}])[\n{body}\n]"
 
 
 def _render_section_body(
@@ -169,12 +185,13 @@ def _render_section_body(
     fn_resolver: FootnoteResolver,
     image_path: Callable[[str], str],
     dropcap: bool,
+    level_offset: int = 0,
 ) -> str:
     dropcap_done = not dropcap
     parts: list[str] = []
     for block in section.blocks:
         if isinstance(block, Section):
-            parts.append(render_section(block, fn_resolver, image_path))
+            parts.append(render_section(block, fn_resolver, image_path, level_offset))
             continue
         if (
             not dropcap_done
@@ -352,8 +369,13 @@ def render(doc, workdir, fonts: list) -> RenderResult:
     lines.append(")")
     lines.append("")
 
+    if doc.sections and not _has_nested_sections(doc.sections):
+        min_top_level = min(s.level for s in doc.sections)
+        level_offset = max(0, 2 - min_top_level)
+    else:
+        level_offset = 0
     for section in doc.sections:
-        lines.append(render_section(section, fn_resolver, image_path))
+        lines.append(render_section(section, fn_resolver, image_path, level_offset))
         lines.append("")
 
     typ_source = "\n".join(lines)

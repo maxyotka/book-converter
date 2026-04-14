@@ -16,6 +16,7 @@ dev = ["pytest>=8.0"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+addopts = "-m 'not slow'"
 markers = [
     "slow: marks tests that invoke typst compile and produce real PDFs",
 ]

@@ -7,6 +7,8 @@ def typst_escape(text: str) -> str:
         text.replace("\\", "\\\\")
         .replace("[", "\\[")
         .replace("]", "\\]")
+        .replace("(", "\\(")
+        .replace(")", "\\)")
         .replace("#", "\\#")
         .replace("@", "\\@")
         .replace("$", "\\$")
@@ -15,6 +17,7 @@ def typst_escape(text: str) -> str:
         .replace("`", "\\`")
         .replace("<", "\\<")
         .replace(">", "\\>")
+        .replace("/", "\\/")
     )
 
 

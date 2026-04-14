@@ -32,7 +32,8 @@ def test_subtitle():
 
 def test_image():
     out = render_block(Image(binary_id="img_1"), _no_fn)
-    assert "#book-image(" in out
+    assert "#book-image[" in out
+    assert "#image(" in out
     assert "img_1" in out
 
 

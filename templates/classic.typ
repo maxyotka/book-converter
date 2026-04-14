@@ -239,8 +239,8 @@
   v(0.8em)
 }
 
-#let book-image(path) = {
+#let book-image(body) = {
   v(0.5em)
-  align(center)[#image(path, width: 80%)]
+  align(center)[#body]
   v(0.5em)
 }
