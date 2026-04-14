@@ -3,11 +3,15 @@ from __future__ import annotations
 
 import re as _re
 import sys
+from dataclasses import dataclass
+from pathlib import Path
 from typing import Callable
 
 from book_converter.ir import (
+    Binary,
     Block,
     Cite,
+    Document,
     Epigraph,
     Footnote,
     Image,
@@ -21,11 +25,13 @@ from book_converter.ir import (
     InlineText,
     Paragraph,
     Poem,
+    PoemStanza,
     SceneBreak,
     Section,
     Subtitle,
 )
 from book_converter.render.escape import typst_escape, typst_string
+from book_converter.typography import registry as _typo_registry
 
 FootnoteResolver = Callable[[str], object]
 
@@ -219,3 +225,139 @@ def make_footnote_resolver(footnotes: dict[str, Footnote]) -> FootnoteResolver:
         return " ".join(parts)
 
     return _resolve
+
+
+@dataclass
+class RenderResult:
+    typ_path: Path
+    assets: list
+
+
+def _write_binaries(binaries: dict, workdir: Path) -> dict:
+    assets_dir = workdir / "assets"
+    assets_dir.mkdir(parents=True, exist_ok=True)
+    mapping: dict[str, str] = {}
+    for bid, binary in binaries.items():
+        target = assets_dir / binary.filename
+        target.write_bytes(binary.data)
+        mapping[bid] = f"assets/{binary.filename}"
+    return mapping
+
+
+def _render_annotation(blocks: list, footnote_resolver: FootnoteResolver) -> str:
+    parts = []
+    for b in blocks:
+        if isinstance(b, Paragraph):
+            parts.append(render_inlines(b.inlines, footnote_resolver))
+    return " ".join(parts)
+
+
+def _apply_typography(doc, typography):
+    def _transform_blocks(blocks: list) -> list:
+        out = []
+        for b in blocks:
+            if isinstance(b, Paragraph):
+                out.append(Paragraph(inlines=typography.transform_paragraph(b.inlines)))
+            elif isinstance(b, Subtitle):
+                out.append(Subtitle(inlines=typography.transform_paragraph(b.inlines)))
+            elif isinstance(b, Section):
+                out.append(Section(
+                    level=b.level,
+                    title=[typography.transform_paragraph(line) for line in b.title],
+                    blocks=_transform_blocks(b.blocks),
+                ))
+            elif isinstance(b, Epigraph):
+                out.append(Epigraph(
+                    blocks=_transform_blocks(b.blocks),
+                    author=typography.transform_paragraph(b.author) if b.author else None,
+                ))
+            elif isinstance(b, Cite):
+                out.append(Cite(
+                    blocks=_transform_blocks(b.blocks),
+                    author=typography.transform_paragraph(b.author) if b.author else None,
+                ))
+            elif isinstance(b, Poem):
+                new_stanzas = [
+                    PoemStanza(lines=[typography.transform_paragraph(line) for line in st.lines])
+                    for st in b.stanzas
+                ]
+                out.append(Poem(
+                    title=typography.transform_paragraph(b.title) if b.title else None,
+                    stanzas=new_stanzas,
+                    author=typography.transform_paragraph(b.author) if b.author else None,
+                ))
+            else:
+                out.append(b)
+        return out
+
+    new_sections = [
+        Section(
+            level=s.level,
+            title=[typography.transform_paragraph(line) for line in s.title],
+            blocks=_transform_blocks(s.blocks),
+        )
+        for s in doc.sections
+    ]
+    new_footnotes = {
+        fid: Footnote(id=fid, blocks=_transform_blocks(fn.blocks))
+        for fid, fn in doc.footnotes.items()
+    }
+    new_meta = doc.meta.model_copy(update={
+        "annotation": _transform_blocks(doc.meta.annotation),
+    })
+    return Document(
+        meta=new_meta,
+        sections=new_sections,
+        footnotes=new_footnotes,
+        binaries=doc.binaries,
+    )
+
+
+def render(doc, workdir, fonts: list) -> RenderResult:
+    workdir = Path(workdir)
+    workdir.mkdir(parents=True, exist_ok=True)
+
+    typography = _typo_registry.get(doc.meta.lang)
+    doc = _apply_typography(doc, typography)
+
+    asset_map = _write_binaries(doc.binaries, workdir)
+
+    def image_path(bid: str) -> str:
+        return asset_map.get(bid, f"assets/{bid}")
+
+    fn_resolver = make_footnote_resolver(doc.footnotes)
+
+    lines: list[str] = []
+    lines.append('#import "/templates/classic.typ": *')
+    lines.append("")
+    lines.append("#show: book.with(")
+    lines.append(f"  title: {typst_string(doc.meta.title)},")
+    lines.append(f"  author: {typst_string(doc.meta.author)},")
+    lines.append(f"  lang: {typst_string(doc.meta.lang)},")
+    fonts_src = "(" + ", ".join(typst_string(f) for f in fonts) + ",)"
+    lines.append(f"  fonts: {fonts_src},")
+    if doc.meta.series_name is not None:
+        lines.append(f"  series-name: {typst_string(doc.meta.series_name)},")
+        lines.append(f"  series-number: {doc.meta.series_number},")
+    if doc.meta.cover_binary_id and doc.meta.cover_binary_id in doc.binaries:
+        cover_path = asset_map[doc.meta.cover_binary_id]
+        lines.append(
+            f'  cover: image({typst_string(cover_path)}, width: 100%, height: 100%, fit: "cover"),'
+        )
+    lines.append(f"  publisher: {typst_string(doc.meta.publisher)},")
+    lines.append(f"  year: {typst_string(doc.meta.year)},")
+    lines.append(f"  isbn: {typst_string(doc.meta.isbn)},")
+    ann_src = _render_annotation(doc.meta.annotation, fn_resolver)
+    lines.append(f"  annotation: [{ann_src}],")
+    lines.append(")")
+    lines.append("")
+
+    for section in doc.sections:
+        lines.append(render_section(section, fn_resolver, image_path))
+        lines.append("")
+
+    typ_source = "\n".join(lines)
+    typ_path = workdir / "book.typ"
+    typ_path.write_text(typ_source, encoding="utf-8")
+
+    return RenderResult(typ_path=typ_path, assets=list((workdir / "assets").glob("*")))
