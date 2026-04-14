@@ -9,6 +9,7 @@ from book_converter.ir import (
     Cite,
     Document,
     Epigraph,
+    Footnote,
     Image,
     Inline,
     InlineEmphasis,
@@ -231,9 +232,20 @@ def parse_section(section: ET.Element, level: int) -> Section:
 def parse_document(root: ET.Element) -> Document:
     meta = parse_metadata(root)
     sections: list[Section] = []
+    footnotes: dict[str, Footnote] = {}
     for body in root.findall("f:body", NS):
-        if body.get("name"):
-            continue  # handled in task 9 (notes)
+        name = body.get("name")
+        if name == "notes":
+            for sec in body.findall("f:section", NS):
+                note_id = sec.get("id")
+                if not note_id:
+                    continue
+                note_section = parse_section(sec, level=1)
+                # Drop the title, keep only body blocks
+                footnotes[note_id] = Footnote(id=note_id, blocks=note_section.blocks)
+            continue
+        if name:
+            continue  # other named bodies ignored
         for sec in body.findall("f:section", NS):
             sections.append(parse_section(sec, level=1))
-    return Document(meta=meta, sections=sections, footnotes={}, binaries={})
+    return Document(meta=meta, sections=sections, footnotes=footnotes, binaries={})
