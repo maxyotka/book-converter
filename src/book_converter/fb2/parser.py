@@ -5,6 +5,13 @@ from xml.etree import ElementTree as ET
 
 from book_converter.ir import (
     BookMeta,
+    Inline,
+    InlineEmphasis,
+    InlineFootnoteRef,
+    InlineLink,
+    InlineStrong,
+    InlineSub,
+    InlineSup,
     InlineText,
     Paragraph,
 )
@@ -86,3 +93,47 @@ def parse_metadata(root: ET.Element) -> BookMeta:
         annotation=annotation_blocks,
         cover_binary_id=cover_id,
     )
+
+
+_INLINE_TAGS = {
+    "emphasis": ("em", InlineEmphasis),
+    "strong": ("strong", InlineStrong),
+    "sub": ("sub", InlineSub),
+    "sup": ("sup", InlineSup),
+}
+
+
+def _local(tag: str) -> str:
+    return tag.split("}", 1)[-1]
+
+
+def _parse_inlines(elem: ET.Element) -> list[Inline]:
+    out: list[Inline] = []
+
+    def _push_text(text: str | None) -> None:
+        if not text:
+            return
+        if out and out[-1].kind == "text":
+            out[-1] = InlineText(text=out[-1].text + text)
+        else:
+            out.append(InlineText(text=text))
+
+    _push_text(elem.text)
+    for child in elem:
+        local = _local(child.tag)
+        if local in _INLINE_TAGS:
+            _kind, cls = _INLINE_TAGS[local]
+            out.append(cls(children=_parse_inlines(child)))
+        elif local == "a":
+            href = child.get(L_HREF, "")
+            a_type = child.get("type", "")
+            if href.startswith(("http://", "https://", "mailto:")):
+                out.append(InlineLink(url=href, children=_parse_inlines(child)))
+            elif a_type == "note" and href.startswith("#"):
+                out.append(InlineFootnoteRef(note_id=href[1:]))
+            else:
+                out.extend(_parse_inlines(child))
+        else:
+            out.extend(_parse_inlines(child))
+        _push_text(child.tail)
+    return out

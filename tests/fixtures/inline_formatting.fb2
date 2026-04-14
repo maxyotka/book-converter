@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0" xmlns:l="http://www.w3.org/1999/xlink">
+<description><title-info><book-title>I</book-title><author><first-name>A</first-name></author><lang>ru</lang></title-info></description>
+<body>
+<section><title><p>T</p></title>
+<p>plain <emphasis>em</emphasis> mid <strong>str</strong> end</p>
+<p>nested <emphasis>out <strong>in</strong> back</emphasis> tail</p>
+<p>x<sub>1</sub>y<sup>2</sup>z</p>
+<p>link <a l:href="https://example.com">site</a> done</p>
+<p>note<a l:href="#n1" type="note">1</a> after</p>
+<p>crossref <a l:href="#some_id">text</a> end</p>
+</section>
+</body>
+</FictionBook>
