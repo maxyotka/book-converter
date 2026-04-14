@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0" xmlns:l="http://www.w3.org/1999/xlink">
+<description><title-info><book-title>B</book-title><author><first-name>A</first-name></author><lang>ru</lang></title-info></description>
+<body>
+<section><title><p>T</p></title>
+<p>first</p>
+<empty-line/>
+<p>after break</p>
+<subtitle><p>Sub heading</p></subtitle>
+<image l:href="#img_1"/>
+<p>last</p>
+</section>
+</body>
+<binary id="img_1" content-type="image/png">aGk=</binary>
+</FictionBook>

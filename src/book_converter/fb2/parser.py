@@ -4,7 +4,9 @@ from __future__ import annotations
 from xml.etree import ElementTree as ET
 
 from book_converter.ir import (
+    Block,
     BookMeta,
+    Image,
     Inline,
     InlineEmphasis,
     InlineFootnoteRef,
@@ -14,6 +16,8 @@ from book_converter.ir import (
     InlineSup,
     InlineText,
     Paragraph,
+    SceneBreak,
+    Subtitle,
 )
 
 NS = {
@@ -137,3 +141,30 @@ def _parse_inlines(elem: ET.Element) -> list[Inline]:
             out.extend(_parse_inlines(child))
         _push_text(child.tail)
     return out
+
+
+def parse_section_blocks(section: ET.Element) -> list[Block]:
+    blocks: list[Block] = []
+    for child in section:
+        local = _local(child.tag)
+        if local == "title":
+            continue  # handled by caller
+        if local == "epigraph":
+            continue  # handled in task 7
+        if local == "section":
+            continue  # handled in task 8
+        if local == "p":
+            blocks.append(Paragraph(inlines=_parse_inlines(child)))
+        elif local == "empty-line":
+            blocks.append(SceneBreak())
+        elif local == "subtitle":
+            p = child.find("f:p", NS)
+            source = p if p is not None else child
+            blocks.append(Subtitle(inlines=_parse_inlines(source)))
+        elif local == "image":
+            href = child.get(L_HREF, "")
+            if href.startswith("#"):
+                blocks.append(Image(binary_id=href[1:]))
+        elif local in ("cite", "poem"):
+            continue  # handled in task 7
+    return blocks
