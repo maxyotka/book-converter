@@ -1,13 +1,22 @@
 [project]
 name = "book-converter"
-version = "0.1.0"
-description = "FB2 to beautiful PDF converter for Russian books"
+version = "0.2.0"
+description = "Universal FB2 → beautiful PDF converter"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "pydantic>=2.6",
+]
+
+[project.scripts]
+book-converter = "book_converter.cli:main"
 
 [dependency-groups]
 dev = ["pytest>=8.0"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["."]
+pythonpath = ["src"]
+addopts = "-m 'not slow'"
+markers = [
+    "slow: marks tests that invoke typst compile and produce real PDFs",
+]

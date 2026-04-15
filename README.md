@@ -1,34 +1,53 @@
-# Book Converter — «Русалка. Поиск»
+# Book Converter
 
-Конвертирует FB2 книгу Владимира Сотникова «Русалка. Поиск» (серия «Веня Пухов», №3)
-в красиво оформленный PDF с русской типографикой, буквицами и шмуцтитулами.
+Universal FB2 → beautiful PDF converter with Russian/English book typography.
 
-## Требования
+## Requirements
 
-- Python 3.11+ и [uv](https://docs.astral.sh/uv/)
+- Python 3.11+ and [uv](https://docs.astral.sh/uv/)
 - [Typst](https://typst.app/) CLI (>= 0.12)
-- Шрифт PT Serif в `src/fonts/` (уже включён)
+- Fonts in `templates/fonts/` (PT Serif bundled under OFL)
 
-## Сборка
+## Quick start
 
 ```bash
 uv sync
-./build.sh
+./build.sh          # builds all books in books/ to build/
 ```
 
-Результат: `build/Rusalka-Poisk.pdf`.
+Or convert one book:
 
-## Структура
+```bash
+uv run book-converter path/to/book.fb2.zip -o build/book.pdf
+```
 
-- `src/fb2_to_typst.py` — парсер FB2 → Typst-источник + обложка
-- `src/template.typ` — шаблон оформления (книжная типографика)
-- `src/fonts/` — PT Serif (OFL)
-- `tests/` — pytest-тесты для парсера
-- `docs/superpowers/specs/` — дизайн-документ
-- `docs/superpowers/plans/` — план реализации
+## Per-book overrides
 
-## Тесты
+Create `<book_stem>.toml` next to the FB2:
+
+```toml
+title = "Correct Title"
+author = "Правильный Автор"
+lang = "en"
+fonts = ["EB Garamond", "Liberation Serif"]
+```
+
+CLI flags (`--title`, `--author`, `--lang`, `--font`, ...) override TOML.
+
+## Structure
+
+- `src/book_converter/` — Python package: parser, renderer, CLI, typography
+- `templates/classic.typ` — book template
+- `templates/fonts/` — bundled fonts
+- `books/` — input FB2 files
+- `build/` — output PDFs
+- `tests/` — pytest suite (fixtures in `tests/fixtures/`)
+- `docs/superpowers/specs/` — design docs
+- `docs/superpowers/plans/` — implementation plans
+
+## Tests
 
 ```bash
 uv run pytest
+uv run pytest -m slow    # also runs real typst compile
 ```

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0" xmlns:l="http://www.w3.org/1999/xlink">
+<description><title-info><book-title>N</book-title><author><first-name>A</first-name></author><lang>ru</lang></title-info></description>
+<body>
+<section>
+  <title><p>Книга первая</p></title>
+  <p>intro L1</p>
+  <section>
+    <title><p>Часть I</p></title>
+    <p>intro L2</p>
+    <section>
+      <title><p>Глава 1</p><p>Название главы</p></title>
+      <p>intro L3</p>
+      <section>
+        <title><p>Раздел A</p></title>
+        <p>intro L4</p>
+        <section>
+          <title><p>Подраздел i</p></title>
+          <p>deepest</p>
+        </section>
+      </section>
+    </section>
+  </section>
+</section>
+</body>
+</FictionBook>
