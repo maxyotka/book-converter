@@ -41,13 +41,24 @@
     page(margin: 0cm, header: none, footer: none)[#cover]
   }
 
+  let l10n = (
+    book-n: if lang == "en" { "Book" } else { "Книга" },
+    series: if lang == "en" { "Series" } else { "Серия" },
+    contents: if lang == "en" { "Contents" } else { "Содержание" },
+    typeset: if lang == "en" {
+      "Typeset from FB2 with Typst,"
+    } else {
+      "PDF-вёрстка выполнена из FB2-источника с помощью Typst,"
+    },
+  )
+
   // --- TITLE PAGE ---
   page(margin: (top: 4cm, bottom: 3cm, left: 2cm, right: 2cm), header: none, footer: none)[
     #set align(center)
     #if series-name != none [
       #text(size: 13pt, tracking: 0.15em)[#upper(series-name)]
       #v(0.4em)
-      #text(size: 11pt)[Книга #series-number]
+      #text(size: 11pt)[#l10n.book-n #if series-number != none [#series-number]]
       #v(4cm)
     ]
     #text(size: 15pt, tracking: 0.05em)[#author]
@@ -64,14 +75,13 @@
     #author \
     «#title» \
     #if series-name != none [
-      Серия: #series-name, книга #series-number \
+      #l10n.series: #series-name#if series-number != none [, #lower(l10n.book-n) #series-number] \
     ]
     #v(0.4em)
-    Источник: #publisher, #year \
+    #if lang == "en" [Source: ] else [Источник: ]#publisher, #year \
     ISBN: #isbn
     #v(1em)
-    PDF-вёрстка выполнена из FB2-источника \
-    с помощью Typst, #datetime.today().display()
+    #l10n.typeset #datetime.today().display()
   ]
 
   // --- ANNOTATION ---
@@ -87,7 +97,7 @@
   // --- TOC ---
   page(header: none, footer: none)[
     #v(2cm)
-    #align(center)[#text(size: 24pt, weight: "bold")[Содержание]]
+    #align(center)[#text(size: 24pt, weight: "bold")[#l10n.contents]]
     #v(1.5cm)
     #set text(size: 11pt)
     #outline(title: none, depth: 2, indent: 1em)
