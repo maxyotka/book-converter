@@ -19,6 +19,8 @@ SMITH = BOOKS / "Smit_Issledovanie-o-prirode-i-prichinah-bogatstva-narodov.i8EvS
 
 @pytest.mark.parametrize("fb2", [RUSALKA, SMITH])
 def test_parse_and_render_to_typ(tmp_path, fb2):
+    if not fb2.exists():
+        pytest.skip(f"{fb2.name} not present (books/ is gitignored)")
     root = load_fb2(fb2)
     doc = parse_document(root)
     assert doc.meta.title
@@ -33,6 +35,8 @@ def test_parse_and_render_to_typ(tmp_path, fb2):
 @pytest.mark.slow
 @pytest.mark.parametrize("fb2", [RUSALKA, SMITH])
 def test_full_pdf_compile(fb2):
+    if not fb2.exists():
+        pytest.skip(f"{fb2.name} not present (books/ is gitignored)")
     if shutil.which("typst") is None:
         pytest.skip("typst CLI not available")
     # workdir must live inside PROJECT_ROOT so typst --root can resolve

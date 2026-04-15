@@ -5,3 +5,8 @@ __pycache__/
 .venv/
 *.epub
 *.mobi
+
+# User book workspace — fixtures in tests/ are tracked, books/ is not
+books/*.fb2
+books/*.fb2.zip
+books/*.pdf
