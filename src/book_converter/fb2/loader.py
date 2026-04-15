@@ -5,6 +5,8 @@ import zipfile
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
+from defusedxml.ElementTree import parse as _safe_parse
+
 
 def load_fb2(path: Path) -> ET.Element:
     path = Path(path)
@@ -18,6 +20,6 @@ def load_fb2(path: Path) -> ET.Element:
             except StopIteration as e:
                 raise ValueError(f"no .fb2 entry in {path}") from e
             with z.open(fb2_name) as f:
-                return ET.parse(f).getroot()
+                return _safe_parse(f).getroot()
 
-    return ET.parse(path).getroot()
+    return _safe_parse(path).getroot()
