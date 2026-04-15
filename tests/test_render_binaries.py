@@ -57,3 +57,19 @@ def test_render_typ_content_has_book_header(tmp_path):
     assert 'lang: "ru"' in src
     assert 'cover_id.jpg' in src
     assert "#chapter(" in src
+
+
+def test_render_series_without_number_emits_typst_none(tmp_path):
+    doc = _make_doc()
+    doc = doc.model_copy(
+        update={
+            "meta": doc.meta.model_copy(
+                update={"series_name": "Мир", "series_number": None}
+            )
+        }
+    )
+    result = render(doc, workdir=tmp_path, fonts=["PT Serif"])
+    src = result.typ_path.read_text(encoding="utf-8")
+    assert "series-name:" in src
+    assert "series-number: none," in src
+    assert "series-number: None" not in src

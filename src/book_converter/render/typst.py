@@ -32,8 +32,9 @@ from book_converter.ir import (
 )
 from book_converter.render.escape import typst_escape, typst_string
 from book_converter.typography import registry as _typo_registry
+from book_converter.typography.base import Typography
 
-FootnoteResolver = Callable[[str], object]
+FootnoteResolver = Callable[[str], str | None]
 
 
 def render_inlines(inlines: list[Inline], footnote_resolver: FootnoteResolver) -> str:
@@ -65,14 +66,14 @@ def _render_one(node: Inline, fn_resolver: FootnoteResolver) -> str:
     return ""
 
 
-def _maybe_author(author) -> str:
+def _maybe_author(author: list[Inline] | None) -> str:
     if author is None:
         return "none"
     return f"[{render_inlines(author, lambda _nid: None)}]"
 
 
 def render_block(
-    block,
+    block: Block,
     footnote_resolver: FootnoteResolver,
     image_path: Callable[[str], str] | None = None,
 ) -> str:
@@ -110,7 +111,7 @@ def render_block(
 _CHAPTER_LABEL_RE = _re.compile(r"^\s*(Глава|Chapter|Part)\s+\S+", _re.IGNORECASE)
 
 
-def _has_nested_sections(sections: list) -> bool:
+def _has_nested_sections(sections: list[Section]) -> bool:
     """True if any top-level section contains a nested Section block."""
     for s in sections:
         for b in s.blocks:
@@ -122,7 +123,7 @@ def _has_nested_sections(sections: list) -> bool:
 _INLINE_CONTAINERS = (InlineEmphasis, InlineStrong, InlineSub, InlineSup, InlineLink)
 
 
-def _plain_text_length(inlines: list) -> int:
+def _plain_text_length(inlines: list[Inline]) -> int:
     total = 0
     for n in inlines:
         if isinstance(n, InlineText):
@@ -132,8 +133,8 @@ def _plain_text_length(inlines: list) -> int:
     return total
 
 
-def _first_paragraph_plain(inlines: list) -> str:
-    parts = []
+def _first_paragraph_plain(inlines: list[Inline]) -> str:
+    parts: list[str] = []
     for n in inlines:
         if isinstance(n, InlineText):
             parts.append(n.text)
@@ -142,13 +143,15 @@ def _first_paragraph_plain(inlines: list) -> str:
     return "".join(parts)
 
 
-def _render_title_lines(title: list, fn_resolver: FootnoteResolver) -> str:
+def _render_title_lines(
+    title: list[list[Inline]], fn_resolver: FootnoteResolver
+) -> str:
     rendered = [render_inlines(line, fn_resolver) for line in title]
     return " \\ ".join(rendered)
 
 
 def render_section(
-    section,
+    section: Section,
     footnote_resolver: FootnoteResolver,
     image_path: Callable[[str], str] | None = None,
     level_offset: int = 0,
@@ -188,7 +191,7 @@ def render_section(
 
 
 def _render_section_body(
-    section,
+    section: Section,
     fn_resolver: FootnoteResolver,
     image_path: Callable[[str], str],
     dropcap: bool,
@@ -206,17 +209,18 @@ def _render_section_body(
             and _plain_text_length(block.inlines) >= 120
         ):
             plain = _first_paragraph_plain(block.inlines)
-            first = plain[0]
-            rest_inlines = [InlineText(text=plain[1:])]
-            rest_src = render_inlines(rest_inlines, fn_resolver)
-            parts.append(f"#para[#dropcap({typst_string(first)})[{rest_src}]]")
-            dropcap_done = True
-            continue
+            if plain:
+                first = plain[0]
+                rest_inlines: list[Inline] = [InlineText(text=plain[1:])]
+                rest_src = render_inlines(rest_inlines, fn_resolver)
+                parts.append(f"#para[#dropcap({typst_string(first)})[{rest_src}]]")
+                dropcap_done = True
+                continue
         parts.append(render_block(block, fn_resolver, image_path))
     return "\n".join(parts)
 
 
-def _strip_fnref(inlines: list, warned: list) -> list:
+def _strip_fnref(inlines: list[Inline], warned: list[bool]) -> list[Inline]:
     out: list = []
     for n in inlines:
         if isinstance(n, InlineFootnoteRef):
@@ -234,7 +238,7 @@ def _strip_fnref(inlines: list, warned: list) -> list:
 
 
 def make_footnote_resolver(footnotes: dict[str, Footnote]) -> FootnoteResolver:
-    def _resolve(note_id: str):
+    def _resolve(note_id: str) -> str | None:
         fn = footnotes.get(note_id)
         if fn is None:
             return None
@@ -264,7 +268,7 @@ def make_footnote_resolver(footnotes: dict[str, Footnote]) -> FootnoteResolver:
     return _resolve
 
 
-def _flatten_block_to_text(block, warned: list) -> str:
+def _flatten_block_to_text(block: Block, warned: list[bool]) -> str:
     if isinstance(block, (Paragraph, Subtitle)):
         stripped = _strip_fnref(block.inlines, warned)
         return render_inlines(stripped, lambda _n: None)
@@ -286,7 +290,7 @@ class RenderResult:
     assets: list
 
 
-def _write_binaries(binaries: dict, workdir: Path) -> dict:
+def _write_binaries(binaries: dict[str, Binary], workdir: Path) -> dict[str, str]:
     assets_dir = (workdir / "assets").resolve()
     assets_dir.mkdir(parents=True, exist_ok=True)
     mapping: dict[str, str] = {}
@@ -299,17 +303,19 @@ def _write_binaries(binaries: dict, workdir: Path) -> dict:
     return mapping
 
 
-def _render_annotation(blocks: list, footnote_resolver: FootnoteResolver) -> str:
-    parts = []
+def _render_annotation(
+    blocks: list[Block], footnote_resolver: FootnoteResolver
+) -> str:
+    parts: list[str] = []
     for b in blocks:
         if isinstance(b, Paragraph):
             parts.append(render_inlines(b.inlines, footnote_resolver))
     return " ".join(parts)
 
 
-def _apply_typography(doc, typography):
-    def _transform_blocks(blocks: list) -> list:
-        out = []
+def _apply_typography(doc: Document, typography: Typography) -> Document:
+    def _transform_blocks(blocks: list[Block]) -> list[Block]:
+        out: list[Block] = []
         for b in blocks:
             if isinstance(b, Paragraph):
                 out.append(Paragraph(inlines=typography.transform_paragraph(b.inlines)))
@@ -368,7 +374,7 @@ def _apply_typography(doc, typography):
     )
 
 
-def render(doc, workdir, fonts: list) -> RenderResult:
+def render(doc: Document, workdir: Path, fonts: list[str]) -> RenderResult:
     workdir = Path(workdir)
     workdir.mkdir(parents=True, exist_ok=True)
 
@@ -393,7 +399,9 @@ def render(doc, workdir, fonts: list) -> RenderResult:
     lines.append(f"  fonts: {fonts_src},")
     if doc.meta.series_name is not None:
         lines.append(f"  series-name: {typst_string(doc.meta.series_name)},")
-        lines.append(f"  series-number: {doc.meta.series_number},")
+        series_num = doc.meta.series_number
+        series_num_src = "none" if series_num is None else str(series_num)
+        lines.append(f"  series-number: {series_num_src},")
     if doc.meta.cover_binary_id and doc.meta.cover_binary_id in doc.binaries:
         cover_path = asset_map[doc.meta.cover_binary_id]
         lines.append(
