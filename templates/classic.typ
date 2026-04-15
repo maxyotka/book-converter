@@ -78,8 +78,12 @@
       #l10n.series: #series-name#if series-number != none [, #lower(l10n.book-n) #series-number] \
     ]
     #v(0.4em)
-    #if lang == "en" [Source: ] else [Источник: ]#publisher, #year \
-    ISBN: #isbn
+    #if publisher != "" or year != "" [
+      #if lang == "en" [Source: ] else [Источник: ]#publisher#if publisher != "" and year != "" [, ]#year \
+    ]
+    #if isbn != "" [
+      ISBN: #isbn \
+    ]
     #v(1em)
     #l10n.typeset #datetime.today().display()
   ]
