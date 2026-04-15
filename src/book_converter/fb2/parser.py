@@ -234,22 +234,26 @@ def parse_section(section: ET.Element, level: int) -> Section:
 
 
 def _parse_table(elem: ET.Element) -> list[Block]:
-    """Flatten FB2 <table> to paragraphs: one row per line, cells joined by ' | '."""
+    """Flatten FB2 <table> to paragraphs: one row per line, cells joined by ' | '.
+
+    Inline formatting inside cells is preserved.
+    """
     rows: list[Block] = []
+    sep = InlineText(text=" | ")
     for tr in elem.findall("f:tr", NS):
-        cells: list[str] = []
+        cells: list[list[Inline]] = []
         for cell in tr:
             if _local(cell.tag) not in ("th", "td"):
                 continue
-            inlines = _parse_inlines(cell)
-            parts: list[str] = []
-            for n in inlines:
-                if isinstance(n, InlineText):
-                    parts.append(n.text)
-            cells.append("".join(parts).strip())
-        if cells:
-            line = " | ".join(cells)
-            rows.append(Paragraph(inlines=[InlineText(text=line)]))
+            cells.append(_parse_inlines(cell))
+        if not cells:
+            continue
+        merged: list[Inline] = []
+        for i, cell in enumerate(cells):
+            if i > 0:
+                merged.append(sep)
+            merged.extend(cell)
+        rows.append(Paragraph(inlines=merged))
     return rows
 
 
