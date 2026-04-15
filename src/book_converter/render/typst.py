@@ -119,12 +119,15 @@ def _has_nested_sections(sections: list) -> bool:
     return False
 
 
+_INLINE_CONTAINERS = (InlineEmphasis, InlineStrong, InlineSub, InlineSup, InlineLink)
+
+
 def _plain_text_length(inlines: list) -> int:
     total = 0
     for n in inlines:
         if isinstance(n, InlineText):
             total += len(n.text)
-        elif hasattr(n, "children"):
+        elif isinstance(n, _INLINE_CONTAINERS):
             total += _plain_text_length(n.children)
     return total
 
@@ -134,7 +137,7 @@ def _first_paragraph_plain(inlines: list) -> str:
     for n in inlines:
         if isinstance(n, InlineText):
             parts.append(n.text)
-        elif hasattr(n, "children"):
+        elif isinstance(n, _INLINE_CONTAINERS):
             parts.append(_first_paragraph_plain(n.children))
     return "".join(parts)
 
@@ -164,7 +167,11 @@ def render_section(
         return "\n".join(parts)
 
     if effective_level == 2:
-        if section.title and _CHAPTER_LABEL_RE.match(_first_paragraph_plain(section.title[0])):
+        if (
+            section.title
+            and section.title[0]
+            and _CHAPTER_LABEL_RE.match(_first_paragraph_plain(section.title[0]))
+        ):
             number_line = render_inlines(section.title[0], footnote_resolver)
             rest_lines = [render_inlines(line, footnote_resolver) for line in section.title[1:]]
             title_src = " \\ ".join(rest_lines) if rest_lines else ""
@@ -219,7 +226,7 @@ def _strip_fnref(inlines: list, warned: list) -> list:
             out.append(n)
         elif isinstance(n, InlineLink):
             out.append(InlineLink(url=n.url, children=_strip_fnref(n.children, warned)))
-        elif hasattr(n, "children"):
+        elif isinstance(n, _INLINE_CONTAINERS):
             out.append(type(n)(children=_strip_fnref(n.children, warned)))
         else:
             out.append(n)
@@ -234,14 +241,43 @@ def make_footnote_resolver(footnotes: dict[str, Footnote]) -> FootnoteResolver:
         warned = [False]
         parts: list[str] = []
         for block in fn.blocks:
-            if isinstance(block, Paragraph):
+            if isinstance(block, (Paragraph, Subtitle)):
                 stripped = _strip_fnref(block.inlines, warned)
                 parts.append(render_inlines(stripped, lambda _n: None))
+            elif isinstance(block, SceneBreak):
+                continue
+            elif isinstance(block, Image):
+                print(
+                    f"warning: image in footnote '{note_id}' dropped",
+                    file=sys.stderr,
+                )
+            else:
+                print(
+                    f"warning: {type(block).__name__} in footnote '{note_id}' flattened to text",
+                    file=sys.stderr,
+                )
+                parts.append(_flatten_block_to_text(block, warned))
         if warned[0]:
             print(f"warning: nested footnote in '{note_id}' flattened", file=sys.stderr)
-        return " ".join(parts)
+        return " ".join(p for p in parts if p)
 
     return _resolve
+
+
+def _flatten_block_to_text(block, warned: list) -> str:
+    if isinstance(block, (Paragraph, Subtitle)):
+        stripped = _strip_fnref(block.inlines, warned)
+        return render_inlines(stripped, lambda _n: None)
+    if isinstance(block, (Epigraph, Cite)):
+        return " ".join(_flatten_block_to_text(b, warned) for b in block.blocks)
+    if isinstance(block, Poem):
+        out = []
+        for stanza in block.stanzas:
+            for line in stanza.lines:
+                stripped = _strip_fnref(line, warned)
+                out.append(render_inlines(stripped, lambda _n: None))
+        return " ".join(out)
+    return ""
 
 
 @dataclass
@@ -251,11 +287,13 @@ class RenderResult:
 
 
 def _write_binaries(binaries: dict, workdir: Path) -> dict:
-    assets_dir = workdir / "assets"
+    assets_dir = (workdir / "assets").resolve()
     assets_dir.mkdir(parents=True, exist_ok=True)
     mapping: dict[str, str] = {}
     for bid, binary in binaries.items():
-        target = assets_dir / binary.filename
+        target = (assets_dir / binary.filename).resolve()
+        if not target.is_relative_to(assets_dir):
+            raise ValueError(f"binary {bid!r}: unsafe filename {binary.filename!r}")
         target.write_bytes(binary.data)
         mapping[bid] = f"assets/{binary.filename}"
     return mapping

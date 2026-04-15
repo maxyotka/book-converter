@@ -33,7 +33,7 @@ def test_build_batch_runs_all_books(tmp_path, monkeypatch):
 def test_build_batch_continues_on_error(tmp_path, monkeypatch, capsys):
     def fake_convert(input_path, output_path, cli_overrides, workdir, explicit_toml=None):
         if "bad" in input_path.name:
-            raise RuntimeError("boom")
+            raise ValueError("boom")
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_bytes(b"ok")
         return 0

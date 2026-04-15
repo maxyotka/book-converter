@@ -4,6 +4,7 @@ version = "0.2.0"
 description = "Universal FB2 → beautiful PDF converter"
 requires-python = ">=3.11"
 dependencies = [
+    "defusedxml>=0.7.1",
     "pydantic>=2.6",
 ]
 

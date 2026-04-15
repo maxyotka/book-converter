@@ -1,10 +1,25 @@
 """Batch-build all FB2 files in a directory."""
 from __future__ import annotations
 
+import subprocess
 import sys
+import zipfile
 from pathlib import Path
+from xml.etree.ElementTree import ParseError
+
+from pydantic import ValidationError
 
 from book_converter.cli import _default_output_name, convert_single
+
+_RECOVERABLE = (
+    FileNotFoundError,
+    ValueError,
+    ParseError,
+    ValidationError,
+    zipfile.BadZipFile,
+    subprocess.CalledProcessError,
+    OSError,
+)
 
 
 def _discover_inputs(books_dir: Path) -> list[Path]:
@@ -45,7 +60,7 @@ def build_batch(books_dir: Path, out_dir: Path) -> int:
                 explicit_toml=None,
             )
             successes.append(fb2)
-        except Exception as e:
+        except _RECOVERABLE as e:
             failures.append((fb2, str(e)))
             print(f"error: {fb2.name}: {e}", file=sys.stderr)
 

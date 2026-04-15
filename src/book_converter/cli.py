@@ -74,10 +74,24 @@ def _cli_overrides_from_args(args: argparse.Namespace) -> dict:
 
 
 def _run_typst(typ_path: Path, pdf_path: Path, root: Path) -> None:
-    subprocess.run(
+    result = subprocess.run(
         ["typst", "compile", "--root", str(root), str(typ_path), str(pdf_path)],
-        check=True,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
     )
+    if result.returncode != 0:
+        if result.stdout:
+            sys.stderr.write(result.stdout)
+        if result.stderr:
+            sys.stderr.write(result.stderr)
+        raise subprocess.CalledProcessError(
+            result.returncode,
+            ["typst", "compile", str(typ_path), str(pdf_path)],
+            output=result.stdout,
+            stderr=result.stderr,
+        )
 
 
 def convert_single(

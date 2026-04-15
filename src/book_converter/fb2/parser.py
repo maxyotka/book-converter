@@ -226,9 +226,31 @@ def parse_section(section: ET.Element, level: int) -> Section:
             ))
         elif local == "poem":
             blocks.append(_parse_poem(child))
+        elif local == "table":
+            blocks.extend(_parse_table(child))
         elif local == "section":
             blocks.append(parse_section(child, level=level + 1))
     return Section(level=level, title=title_lines, blocks=blocks)
+
+
+def _parse_table(elem: ET.Element) -> list[Block]:
+    """Flatten FB2 <table> to paragraphs: one row per line, cells joined by ' | '."""
+    rows: list[Block] = []
+    for tr in elem.findall("f:tr", NS):
+        cells: list[str] = []
+        for cell in tr:
+            if _local(cell.tag) not in ("th", "td"):
+                continue
+            inlines = _parse_inlines(cell)
+            parts: list[str] = []
+            for n in inlines:
+                if isinstance(n, InlineText):
+                    parts.append(n.text)
+            cells.append("".join(parts).strip())
+        if cells:
+            line = " | ".join(cells)
+            rows.append(Paragraph(inlines=[InlineText(text=line)]))
+    return rows
 
 
 def parse_document(root: ET.Element) -> Document:
