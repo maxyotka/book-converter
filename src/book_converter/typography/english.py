@@ -12,7 +12,7 @@ from book_converter.ir import (
     InlineSup,
     InlineText,
 )
-from book_converter.typography.russian import _flatten, _rebuild, _transform_children
+from book_converter.typography.base import flatten, rebuild, transform_children
 
 NBSP = "\u00a0"
 
@@ -68,10 +68,10 @@ class EnglishTypography:
     lang_codes: tuple[str, ...] = ("en",)
 
     def transform_paragraph(self, inlines: list[Inline]) -> list[Inline]:
-        with_nested = _transform_children(inlines)
-        flat, nodes = _flatten(with_nested)
+        with_nested = transform_children(inlines)
+        flat, nodes = flatten(with_nested)
         transformed = _apply_rules(flat)
-        rebuilt = _rebuild(transformed, nodes)
+        rebuilt = rebuild(transformed, nodes)
         final: list[Inline] = []
         for n in rebuilt:
             if isinstance(n, InlineText):

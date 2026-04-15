@@ -6,12 +6,17 @@ import re
 from book_converter.ir import (
     Inline,
     InlineEmphasis,
-    InlineFootnoteRef,
     InlineLink,
     InlineStrong,
     InlineSub,
     InlineSup,
     InlineText,
+)
+from book_converter.typography.base import (
+    SENTINEL,
+    flatten,
+    rebuild,
+    transform_children,
 )
 
 NBSP = "\u00a0"
@@ -59,65 +64,23 @@ def _apply_dashes_and_nbsp(text: str) -> str:
 
     # Match short words followed by space and either a letter or a sentinel (structural boundary)
     text = re.sub(
-        r"(?<![а-яА-ЯёЁa-zA-Z])([а-яА-ЯёЁa-zA-Z]{1,3}) (?=[а-яА-ЯёЁa-zA-Z]|" + re.escape(_SENTINEL) + r")",
+        r"(?<![а-яА-ЯёЁa-zA-Z])([а-яА-ЯёЁa-zA-Z]{1,3}) (?=[а-яА-ЯёЁa-zA-Z]|"
+        + re.escape(SENTINEL)
+        + r")",
         _short_nbsp,
         text,
     )
     return text
 
 
-_SENTINEL = "\ue000"
-
-
-def _flatten(inlines: list[Inline]) -> tuple[str, list]:
-    flat = []
-    nodes: list = []
-    for node in inlines:
-        if isinstance(node, InlineText):
-            flat.append(node.text)
-        else:
-            flat.append(_SENTINEL)
-            nodes.append(node)
-    return "".join(flat), nodes
-
-
-def _rebuild(flat: str, nodes: list) -> list[Inline]:
-    out: list[Inline] = []
-    idx = 0
-    parts = flat.split(_SENTINEL)
-    for i, part in enumerate(parts):
-        if part:
-            out.append(InlineText(text=part))
-        if i < len(parts) - 1:
-            out.append(nodes[idx])
-            idx += 1
-    return out
-
-
-def _transform_children(inlines: list[Inline]) -> list[Inline]:
-    out: list[Inline] = []
-    for n in inlines:
-        if isinstance(n, InlineText):
-            out.append(n)
-        elif isinstance(n, (InlineEmphasis, InlineStrong, InlineSub, InlineSup, InlineLink)):
-            cls = type(n)
-            if isinstance(n, InlineLink):
-                out.append(InlineLink(url=n.url, children=_transform_children(n.children)))
-            else:
-                out.append(cls(children=_transform_children(n.children)))
-        else:
-            out.append(n)
-    return out
-
-
 class RussianTypography:
     lang_codes: tuple[str, ...] = ("ru",)
 
     def transform_paragraph(self, inlines: list[Inline]) -> list[Inline]:
-        with_nested = _transform_children(inlines)
-        flat, nodes = _flatten(with_nested)
+        with_nested = transform_children(inlines)
+        flat, nodes = flatten(with_nested)
         transformed = _apply_dashes_and_nbsp(flat)
-        rebuilt = _rebuild(transformed, nodes)
+        rebuilt = rebuild(transformed, nodes)
         final: list[Inline] = []
         for n in rebuilt:
             if isinstance(n, InlineText):
