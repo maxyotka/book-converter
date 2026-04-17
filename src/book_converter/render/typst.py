@@ -150,6 +150,23 @@ def _render_title_lines(
     return " \\ ".join(rendered)
 
 
+def _title_is_empty(title: list[list[Inline]]) -> bool:
+    """True if section has no visible title text (no lines, or only whitespace)."""
+    for line in title:
+        if _first_paragraph_plain(line).strip():
+            return False
+    return True
+
+
+def _title_arg(title: list[list[Inline]], fn_resolver: FootnoteResolver) -> str:
+    """Render `title: none` for empty titles, else `title: [...]`. Empty titles
+    must not create outline entries — callers rely on the template branching on
+    `title == none`."""
+    if _title_is_empty(title):
+        return "title: none"
+    return f"title: [{_render_title_lines(title, fn_resolver)}]"
+
+
 def render_section(
     section: Section,
     footnote_resolver: FootnoteResolver,
@@ -160,8 +177,8 @@ def render_section(
     effective_level = section.level + level_offset
 
     if effective_level == 1:
-        title_src = _render_title_lines(section.title, footnote_resolver)
-        parts: list[str] = [f"#part(title: [{title_src}])"]
+        title_arg = _title_arg(section.title, footnote_resolver)
+        parts: list[str] = [f"#part({title_arg})"]
         for block in section.blocks:
             if isinstance(block, Section):
                 parts.append(render_section(block, footnote_resolver, image_path, level_offset))
@@ -179,15 +196,16 @@ def render_section(
             rest_lines = [render_inlines(line, footnote_resolver) for line in section.title[1:]]
             title_src = " \\ ".join(rest_lines) if rest_lines else ""
             number_arg = f"number: {typst_string(number_line)}, "
+            title_arg = f"title: [{title_src}]"
         else:
             number_arg = ""
-            title_src = _render_title_lines(section.title, footnote_resolver)
+            title_arg = _title_arg(section.title, footnote_resolver)
         body = _render_section_body(section, footnote_resolver, image_path, dropcap=True, level_offset=level_offset)
-        return f"#chapter({number_arg}title: [{title_src}])[\n{body}\n]"
+        return f"#chapter({number_arg}{title_arg})[\n{body}\n]"
 
-    title_src = _render_title_lines(section.title, footnote_resolver)
+    title_arg = _title_arg(section.title, footnote_resolver)
     body = _render_section_body(section, footnote_resolver, image_path, dropcap=False, level_offset=level_offset)
-    return f"#subsection(level: {effective_level}, title: [{title_src}])[\n{body}\n]"
+    return f"#subsection(level: {effective_level}, {title_arg})[\n{body}\n]"
 
 
 def _render_section_body(

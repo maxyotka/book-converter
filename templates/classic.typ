@@ -137,42 +137,50 @@
   body
 }
 
-#let part(title: []) = {
+#let part(title: none) = {
   pagebreak(to: "odd", weak: true)
-  heading(level: 1, outlined: true)[#title]
-  v(1fr)
-  align(center)[#text(size: 28pt, weight: "bold", tracking: 0.05em)[#title]]
-  v(1fr)
-  pagebreak(to: "odd", weak: true)
+  if title != none {
+    heading(level: 1, outlined: true)[#title]
+    v(1fr)
+    align(center)[#text(size: 28pt, weight: "bold", tracking: 0.05em)[#title]]
+    v(1fr)
+    pagebreak(to: "odd", weak: true)
+  }
 }
 
-#let chapter(number: none, title: [], body) = {
+#let chapter(number: none, title: none, body) = {
   pagebreak(weak: true)
-  heading(level: 2, outlined: true)[#if number != none [#number. ]#title]
-  v(3cm)
-  if number != none {
-    align(center)[
-      #text(size: 14pt, tracking: 0.2em, weight: "regular")[#upper(number)]
-    ]
-    v(0.5cm)
+  if number != none or title != none {
+    heading(level: 2, outlined: true)[#if number != none [#number. ]#if title != none [#title]]
+    v(3cm)
+    if number != none {
+      align(center)[
+        #text(size: 14pt, tracking: 0.2em, weight: "regular")[#upper(number)]
+      ]
+      v(0.5cm)
+    }
+    if title != none {
+      align(center)[
+        #set par(justify: false, first-line-indent: 0em, leading: 0.5em)
+        #set text(hyphenate: false)
+        #text(size: 22pt, weight: "bold")[#title]
+      ]
+    }
+    v(2cm)
   }
-  align(center)[
-    #set par(justify: false, first-line-indent: 0em, leading: 0.5em)
-    #set text(hyphenate: false)
-    #text(size: 22pt, weight: "bold")[#title]
-  ]
-  v(2cm)
   body
 }
 
-#let subsection(level: 3, title: [], body) = {
-  v(1.5em)
-  let size = if level == 3 { 16pt } else if level == 4 { 13pt } else { 11pt }
-  align(center)[
-    #set par(justify: false, first-line-indent: 0em)
-    #text(size: size, weight: "bold")[#title]
-  ]
-  v(0.8em)
+#let subsection(level: 3, title: none, body) = {
+  if title != none {
+    v(1.5em)
+    let size = if level == 3 { 16pt } else if level == 4 { 13pt } else { 11pt }
+    align(center)[
+      #set par(justify: false, first-line-indent: 0em)
+      #text(size: size, weight: "bold")[#title]
+    ]
+    v(0.8em)
+  }
   body
 }
 

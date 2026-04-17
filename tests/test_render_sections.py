@@ -81,3 +81,29 @@ def test_no_dropcap_for_short_first_paragraph():
     )
     out = render_section(s, _no_fn)
     assert "#dropcap" not in out
+
+
+def test_untitled_part_passes_title_none():
+    s = Section(level=1, title=[], blocks=[Paragraph(inlines=[InlineText(text="intro")])])
+    out = render_section(s, _no_fn)
+    assert "#part(title: none)" in out
+
+
+def test_untitled_chapter_passes_title_none():
+    s = Section(level=2, title=[], blocks=[Paragraph(inlines=[InlineText(text="x")])])
+    out = render_section(s, _no_fn)
+    assert "title: none" in out
+    assert "#chapter(" in out
+
+
+def test_untitled_part_with_empty_title_lines_passes_none():
+    # Guard: title with empty inline lines (e.g. whitespace-only) must also collapse.
+    s = Section(level=1, title=[[InlineText(text="")], [InlineText(text="   ")]], blocks=[])
+    out = render_section(s, _no_fn)
+    assert "#part(title: none)" in out
+
+
+def test_untitled_subsection_passes_title_none():
+    s = Section(level=3, title=[], blocks=[])
+    out = render_section(s, _no_fn)
+    assert "#subsection(level: 3, title: none)" in out
