@@ -15,6 +15,17 @@
 английская / passthrough), рендерит Typst-исходник через шаблон
 `classic.typ` и компилирует PDF.
 
+## Превью
+
+Пример вёрстки небольшой пушкинской подборки — титульная страница, проза
+с эпиграфом и сноской, стихотворение со строфами:
+
+<p align="center">
+  <img src="docs/screenshots/01-title.png" width="280" alt="Титульная страница" />
+  <img src="docs/screenshots/02-prose-epigraph.png" width="280" alt="Проза с эпиграфом" />
+  <img src="docs/screenshots/03-poem.png" width="280" alt="Вёрстка стихотворения" />
+</p>
+
 ---
 
 ## Возможности

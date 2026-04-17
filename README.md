@@ -15,6 +15,17 @@ typed Document IR, applies pluggable typography (Russian, English,
 passthrough), renders a Typst source via the `classic.typ` template, and
 compiles the PDF.
 
+## Preview
+
+Sample output from a short Pushkin collection — title page, prose with
+epigraph and footnote reference, a poem with stanzas:
+
+<p align="center">
+  <img src="docs/screenshots/01-title.png" width="280" alt="Title page" />
+  <img src="docs/screenshots/02-prose-epigraph.png" width="280" alt="Prose with epigraph" />
+  <img src="docs/screenshots/03-poem.png" width="280" alt="Poem layout" />
+</p>
+
 ---
 
 ## Highlights
