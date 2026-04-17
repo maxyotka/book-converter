@@ -32,7 +32,6 @@ real PDF.
 src/book_converter/  parser, IR, config, render, typography
 templates/           classic.typ + bundled PT Serif (OFL)
 tests/               pytest suite + fixtures
-docs/                design specs and plans
 ```
 
 Key abstractions:

@@ -1,7 +1,7 @@
 # book-converter
 
 [![CI](https://github.com/maxyotka/book-converter/actions/workflows/ci.yml/badge.svg)](https://github.com/maxyotka/book-converter/actions/workflows/ci.yml)
-[![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org)
+[![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-1.0.0-brightgreen.svg)](CHANGELOG.md)
 
@@ -9,27 +9,34 @@ Universal **FB2 → beautiful PDF** converter with book-grade Russian / English
 typography, built on [Typst](https://typst.app/).
 
 Parses [FB2](http://www.fictionbook.org/) (including `.fb2.zip`), builds a
-typed Document IR, applies pluggable typography (Russian, English, passthrough),
-renders a Typst source via the `classic.typ` template, and compiles the PDF.
+typed Document IR, applies pluggable typography (Russian, English,
+passthrough), renders a Typst source via the `classic.typ` template, and
+compiles the PDF.
+
+> **RU.** Универсальный конвертер **FB2 → PDF** с книжной типографикой
+> (русской и английской). Парсер FB2 (`.fb2` и `.fb2.zip`) строит типизированный
+> Document IR, типографика применяется плагином по языку, шаблон `classic.typ`
+> рендерит Typst-исходник, компиляция — через Typst CLI.
 
 ---
 
 ## Highlights
 
 - **Full FB2 coverage** — sections nested 5+ levels, `<part>`, `<subtitle>`,
-  `<epigraph>`, `<cite>`, `<poem>`, `<table>` (flattened with inline formatting
-  preserved), `<image>` / `<binary>`, footnotes (`<a type="note">` +
-  `<body name="notes">`), and every inline tag.
-- **Pluggable typography** — Russian (Russian quotes, non-breaking spaces after
-  short prepositions, em-dashes), English (smart quotes, `--` → em-dash),
-  passthrough for the rest. Adding a language = one module + one registry line.
+  `<epigraph>`, `<cite>`, `<poem>`, `<table>` (flattened with inline
+  formatting preserved), `<image>` / `<binary>`, footnotes
+  (`<a type="note">` + `<body name="notes">`), and every inline tag.
+- **Pluggable typography** — Russian (Russian quotes, non-breaking spaces
+  after short prepositions, em-dashes), English (smart quotes, `--` →
+  em-dash), passthrough for the rest. Adding a language = one module + one
+  registry line.
 - **Layered config** — FB2 metadata → `<book_stem>.toml` → CLI flags.
 - **Two CLI modes** — single-shot (`book-converter <input>`) and batch
   (`book-converter build [dir]`) with per-book error isolation.
 - **Hardened parser** — `defusedxml` against XXE, path-traversal guards,
   defensive handling of empty sections and malformed footnotes.
-- **Localized template** — Contents / Source / Series / typeset notice strings
-  pulled from an `l10n` dict keyed by the book's language.
+- **Localized template** — Contents / Source / Series / typeset notice
+  strings are pulled from an `l10n` dict keyed by the book's language.
 
 ## Requirements
 
@@ -110,9 +117,9 @@ uv run pytest          # 90 fast tests (parser, IR, render, typography)
 uv run pytest -m slow  # + integration compile via typst CLI
 ```
 
-Integration smoke (`tests/test_integration_smoke.py`) expects two FB2 files in
-`books/`; both are gitignored, so drop them in yourself — slow tests skip when
-they are absent.
+Integration smoke (`tests/test_integration_smoke.py`) expects two FB2 files
+in `books/`; both are gitignored, so drop them in yourself — slow tests skip
+when they are absent.
 
 ## Adding a language
 
@@ -125,12 +132,12 @@ they are absent.
 
 ## Troubleshooting
 
-- **`unknown font family: pt serif`** — pass `--font-path templates/fonts` to
-  Typst, or use the `book-converter` CLI which wires it up automatically.
+- **`unknown font family: pt serif`** — pass `--font-path templates/fonts`
+  to Typst, or use the `book-converter` CLI which wires it up automatically.
 - **`program not found: book-converter`** — re-run `uv sync` after pulling;
   the entry point is installed by the Hatchling build backend.
-- **Slow tests skip** — expected unless you drop the two referenced FB2 files
-  into `books/`.
+- **Slow tests skip** — expected unless you drop the two referenced FB2
+  files into `books/`.
 
 ## Contributing
 
@@ -143,4 +150,5 @@ Source code: [MIT](LICENSE).
 
 Bundled PT Serif fonts under `templates/fonts/`: SIL Open Font License 1.1 —
 see [`templates/fonts/OFL.txt`](templates/fonts/OFL.txt) and
-[`templates/fonts/README.md`](templates/fonts/README.md) for full attribution.
+[`templates/fonts/README.md`](templates/fonts/README.md) for full
+attribution.

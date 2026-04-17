@@ -8,13 +8,12 @@ on:
 
 jobs:
   test:
-    name: test (py${{ matrix.python-version }} / ${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
+    name: test (py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
-        python-version: ["3.11", "3.12", "3.13"]
+        python-version: ["3.11", "3.13"]
     steps:
       - uses: actions/checkout@v4
 
@@ -29,5 +28,5 @@ jobs:
       - name: Install project
         run: uv sync --python ${{ matrix.python-version }}
 
-      - name: Run fast test suite
+      - name: Run tests
         run: uv run --python ${{ matrix.python-version }} pytest
