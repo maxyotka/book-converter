@@ -1,10 +1,15 @@
 build/
+dist/
+*.egg-info/
 __pycache__/
 *.pyc
 .pytest_cache/
+.ruff_cache/
 .venv/
 *.epub
 *.mobi
+.DS_Store
+Thumbs.db
 
 # User book workspace — fixtures in tests/ are tracked, books/ is not
 books/*.fb2
