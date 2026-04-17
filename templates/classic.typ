@@ -204,21 +204,21 @@
 #let dropcap(letter, rest) = {
   set par(first-line-indent: 0em)
   box(
-    baseline: 0.75em,
-    text(size: 2.2em, weight: "bold", font: ("PT Serif", "Times New Roman"))[#letter],
+    baseline: 0.35em,
+    text(size: 2.0em, weight: "bold", font: ("PT Serif", "Times New Roman"))[#letter],
   )
-  h(0.08em)
+  h(0.1em)
   rest
 }
 
 #let epigraph(author: none, body) = {
   v(0.5em)
   pad(left: 30%)[
-    #set par(justify: true, first-line-indent: 0em, leading: 0.8em)
+    #set par(justify: true, first-line-indent: 0em, leading: 0.55em, spacing: 0.35em)
     #set text(style: "italic", size: 10pt)
     #body
     #if author != none [
-      #v(0.3em)
+      #v(0.5em)
       #align(right)[— #author]
     ]
   ]
