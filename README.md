@@ -1,5 +1,7 @@
 # book-converter
 
+**English** · [Русский](README.ru.md)
+
 [![CI](https://github.com/maxyotka/book-converter/actions/workflows/ci.yml/badge.svg)](https://github.com/maxyotka/book-converter/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -12,11 +14,6 @@ Parses [FB2](http://www.fictionbook.org/) (including `.fb2.zip`), builds a
 typed Document IR, applies pluggable typography (Russian, English,
 passthrough), renders a Typst source via the `classic.typ` template, and
 compiles the PDF.
-
-> **RU.** Универсальный конвертер **FB2 → PDF** с книжной типографикой
-> (русской и английской). Парсер FB2 (`.fb2` и `.fb2.zip`) строит типизированный
-> Document IR, типографика применяется плагином по языку, шаблон `classic.typ`
-> рендерит Typst-исходник, компиляция — через Typst CLI.
 
 ---
 
